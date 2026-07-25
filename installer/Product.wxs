@@ -1,0 +1,65 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+    Name="Select-and-Concat"
+    Manufacturer="SelectAndConcat"
+    Version="1.0.4"
+    UpgradeCode="D5E6E05E-0A4D-4B12-B263-1D92AB89BB5E"
+    Scope="perUser"
+    InstallerVersion="500">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Select-and-Concat is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="INSTALLFOLDER" Name="SelectAndConcat">
+        <Component Id="cmpExe" Guid="*">
+          <File Source="..\src\SelectAndConcat.App\bin\$(Configuration)\net8.0-windows\SelectAndConcat.exe" KeyPath="yes" />
+        </Component>
+        <Component Id="cmpAppDll" Guid="*">
+          <File Source="..\src\SelectAndConcat.App\bin\$(Configuration)\net8.0-windows\SelectAndConcat.dll" KeyPath="yes" />
+        </Component>
+        <Component Id="cmpDeps" Guid="*">
+          <File Source="..\src\SelectAndConcat.App\bin\$(Configuration)\net8.0-windows\SelectAndConcat.deps.json" KeyPath="yes" />
+        </Component>
+        <Component Id="cmpRuntimeConfig" Guid="*">
+          <File Source="..\src\SelectAndConcat.App\bin\$(Configuration)\net8.0-windows\SelectAndConcat.runtimeconfig.json" KeyPath="yes" />
+        </Component>
+        <Component Id="cmpCoreDll" Guid="*">
+          <File Source="..\src\SelectAndConcat.App\bin\$(Configuration)\net8.0-windows\SelectAndConcat.Core.dll" KeyPath="yes" />
+        </Component>
+        <Component Id="cmpIcon" Guid="*">
+          <File Source="..\src\SelectAndConcat.App\Assets\SelectAndConcat.ico" KeyPath="yes" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <Component Id="cmpShellVerb" Directory="INSTALLFOLDER" Guid="*">
+      <RegistryKey Root="HKCU" Key="Software\Classes\*\shell\SelectAndConcat.SelectAndConcat">
+        <RegistryValue Name="MUIVerb" Type="string" Value="Copy contents for LLM" KeyPath="yes" />
+        <RegistryValue Name="MultiSelectModel" Type="string" Value="Player" />
+        <RegistryValue Name="Icon" Type="string" Value="[INSTALLFOLDER]SelectAndConcat.ico" />
+      </RegistryKey>
+      <RegistryKey Root="HKCU" Key="Software\Classes\*\shell\SelectAndConcat.SelectAndConcat\command">
+        <RegistryValue Type="string" Value="&quot;[INSTALLFOLDER]SelectAndConcat.exe&quot; --from-explorer &quot;%1&quot;" />
+      </RegistryKey>
+      <RegistryKey Root="HKCU" Key="Software\Classes\Directory\shell\SelectAndConcat.SelectAndConcat">
+        <RegistryValue Name="MUIVerb" Type="string" Value="Copy contents for LLM" />
+        <RegistryValue Name="MultiSelectModel" Type="string" Value="Player" />
+        <RegistryValue Name="Icon" Type="string" Value="[INSTALLFOLDER]SelectAndConcat.ico" />
+      </RegistryKey>
+      <RegistryKey Root="HKCU" Key="Software\Classes\Directory\shell\SelectAndConcat.SelectAndConcat\command">
+        <RegistryValue Type="string" Value="&quot;[INSTALLFOLDER]SelectAndConcat.exe&quot; --from-explorer &quot;%1&quot;" />
+      </RegistryKey>
+    </Component>
+
+    <Feature Id="MainFeature" Title="Select-and-Concat" Level="1">
+      <ComponentRef Id="cmpExe" />
+      <ComponentRef Id="cmpAppDll" />
+      <ComponentRef Id="cmpDeps" />
+      <ComponentRef Id="cmpRuntimeConfig" />
+      <ComponentRef Id="cmpCoreDll" />
+      <ComponentRef Id="cmpIcon" />
+      <ComponentRef Id="cmpShellVerb" />
+    </Feature>
+  </Package>
+</Wix>

@@ -1,0 +1,31 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Restore dependencies
+      run: dotnet restore SelectAndConcat.sln
+
+    - name: Build
+      run: dotnet build SelectAndConcat.sln -c Release --no-restore
+
+    - name: Test
+      run: dotnet test SelectAndConcat.sln -c Release --no-build --verbosity normal
+
+    - name: Build Installer
+      run: dotnet build installer/SelectAndConcat.Installer.wixproj -c Release

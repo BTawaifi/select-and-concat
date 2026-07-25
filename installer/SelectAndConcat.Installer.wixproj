@@ -1,0 +1,11 @@
+<Project Sdk="WixToolset.Sdk/5.0.2">
+  <PropertyGroup>
+    <OutputType>Package</OutputType>
+    <Platform>x64</Platform>
+    <SuppressValidation>true</SuppressValidation>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\src\SelectAndConcat.App\SelectAndConcat.App.csproj" />
+  </ItemGroup>
+</Project>
