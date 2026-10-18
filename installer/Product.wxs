@@ -2,7 +2,7 @@
   <Package
     Name="Select-and-Concat"
     Manufacturer="SelectAndConcat"
-    Version="1.0.4"
+    Version="1.1.0"
     UpgradeCode="D5E6E05E-0A4D-4B12-B263-1D92AB89BB5E"
     Scope="perUser"
     InstallerVersion="500">
