@@ -30,6 +30,7 @@ _Both images are illustrations of the flow and output format, not screenshots._
 - **Smart Markdown Fencing**: Dynamically adjusts fence backticks to cleanly enclose code blocks inside Markdown files without syntax breaking.
 - **Robust Text Decoding**: Automatically handles UTF-8 / UTF-16 encodings and handles mid-codepoint byte boundary truncations cleanly.
 - **Credential Protection**: Automatically excludes secret files (`.env`, `.pem`, `.key`, `id_rsa`, `credentials.json`) to prevent accidental leaks to LLMs.
+- **Secret Redaction**: Values that look like passwords, API keys, tokens, URL credentials, bearer tokens, private-key blocks or any of ~50 vendor token formats (AWS, GitHub, GitLab, Stripe, Shopify, Slack, npm, PyPI, OpenAI-style and more) are replaced with `[REDACTED]` (heuristic and deliberately over-eager; the notification shows how many were redacted). Set the environment variable `SELECTANDCONCAT_REDACT=0` to turn it off.
 - **Noise Filtering**: Automatically ignores dependency and build folders (`node_modules`, `.git`, `bin`, `obj`, `dist`, `build`, etc.) during directory expansion.
 - **Linear-Time Payload Building**: Fast $O(N)$ execution time with automatic size limits.
 - **Visual Feedback**: Displays a system tray notification upon successful copying.

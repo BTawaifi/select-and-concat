@@ -7,6 +7,9 @@ public sealed class ProcessingOptions
     public int MaxBytesPerFile { get; init; } = 10 * 512 * 1024;
 
     public int MaxPayloadBytes { get; init; } = 10 * 2 * 1024 * 1024;
+
+    /// <summary>Replace anything that looks like a password, API key or token with a placeholder.</summary>
+    public bool RedactSecrets { get; init; } = true;
 }
 
 public enum ProcessExitCode
@@ -22,7 +25,8 @@ public sealed record IncludedFile(
     string Content,
     bool WasTruncated,
     int BytesRead,
-    long OriginalLengthBytes);
+    long OriginalLengthBytes,
+    int RedactionCount = 0);
 
 public sealed record SkippedFile(string Path, string Reason);
 
@@ -33,4 +37,6 @@ public sealed record ProcessResult(
     IReadOnlyList<SkippedFile> Skipped)
 {
     public int TruncatedCount => Included.Count(x => x.WasTruncated);
+
+    public int RedactedCount => Included.Sum(x => x.RedactionCount);
 }

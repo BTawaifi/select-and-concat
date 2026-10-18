@@ -27,7 +27,8 @@ internal static class Program
             }
 
             var processor = new SelectionProcessor();
-            var result = processor.Process(coordinatedPaths);
+            var redact = Environment.GetEnvironmentVariable("SELECTANDCONCAT_REDACT") != "0";
+            var result = processor.Process(coordinatedPaths, new ProcessingOptions { RedactSecrets = redact });
 
             if (result.Included.Count == 0)
             {
@@ -46,7 +47,7 @@ internal static class Program
 
             if (result.ExitCode == ProcessExitCode.Success)
             {
-                ShowSuccessNotification(result.Included.Count);
+                ShowSuccessNotification(result.Included.Count, result.RedactedCount);
             }
             else if (result.ExitCode == ProcessExitCode.PartialSuccess)
             {
@@ -89,7 +90,7 @@ internal static class Program
         return false;
     }
 
-    private static void ShowSuccessNotification(int count)
+    private static void ShowSuccessNotification(int count, int redacted)
     {
         try
         {
@@ -98,7 +99,7 @@ internal static class Program
                 Icon = SystemIcons.Information,
                 Visible = true,
                 BalloonTipTitle = "Select-and-Concat",
-                BalloonTipText = $"Copied {count} file(s) to clipboard.",
+                BalloonTipText = $"Copied {count} file(s) to clipboard." + (redacted > 0 ? $" {redacted} secret(s) redacted." : string.Empty),
                 BalloonTipIcon = ToolTipIcon.Info
             };
             notifyIcon.ShowBalloonTip(1500);
@@ -115,7 +116,8 @@ internal static class Program
         {
             $"Copied {result.Included.Count} file(s) to clipboard.",
             $"Skipped: {result.Skipped.Count}",
-            $"Truncated: {result.TruncatedCount}"
+            $"Truncated: {result.TruncatedCount}",
+            $"Secrets redacted: {result.RedactedCount}"
         };
 
         if (result.Skipped.Count > 0)

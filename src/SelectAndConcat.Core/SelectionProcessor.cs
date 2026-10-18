@@ -379,6 +379,13 @@ public sealed class SelectionProcessor
                 return false;
             }
 
+            var redactions = 0;
+            if (options.RedactSecrets && !SecretRedactor.TryRedact(decoded, out decoded, out redactions))
+            {
+                reason = "Secret redaction timed out; skipped so nothing sensitive is copied.";
+                return false;
+            }
+
             if (truncated)
             {
                 decoded += $"\n\n[TRUNCATED: content shortened at {options.MaxBytesPerFile / 1024} KiB limit.]";
@@ -390,7 +397,8 @@ public sealed class SelectionProcessor
                 decoded,
                 truncated,
                 bytesToDecode,
-                length);
+                length,
+                redactions);
 
             return true;
         }
