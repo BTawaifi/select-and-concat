@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 220" font-family="Segoe UI, Arial, sans-serif">
+  <rect width="900" height="220" rx="14" fill="#0f172a"/>
+  <g font-size="15" fill="#e2e8f0" text-anchor="middle">
+    <rect x="30" y="50" width="220" height="120" rx="10" fill="#1e293b" stroke="#38bdf8"/>
+    <text x="140" y="85" font-weight="600" fill="#38bdf8">1. Select</text>
+    <text x="140" y="115">files &amp; folders</text>
+    <text x="140" y="138" fill="#94a3b8">in Windows Explorer</text>
+    <rect x="340" y="50" width="220" height="120" rx="10" fill="#1e293b" stroke="#a78bfa"/>
+    <text x="450" y="85" font-weight="600" fill="#a78bfa">2. Right-click</text>
+    <text x="450" y="115">Copy contents for LLM</text>
+    <text x="450" y="138" fill="#94a3b8">filters secrets &amp; noise</text>
+    <rect x="650" y="50" width="220" height="120" rx="10" fill="#1e293b" stroke="#34d399"/>
+    <text x="760" y="85" font-weight="600" fill="#34d399">3. Paste</text>
+    <text x="760" y="115">fenced Markdown</text>
+    <text x="760" y="138" fill="#94a3b8">straight into your LLM</text>
+  </g>
+  <g stroke="#64748b" stroke-width="2" fill="none"><path d="M255 110h80M565 110h80"/><path d="M328 103l8 7-8 7M638 103l8 7-8 7"/></g>
+</svg>
