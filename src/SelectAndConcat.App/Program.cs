@@ -21,7 +21,9 @@ internal static class Program
             var coordinatedPaths = ExplorerInvocationCoordinator.CollectOrForward(args[1..]);
             if (coordinatedPaths is null)
             {
-                return (int)ProcessExitCode.Success;
+                return ExplorerInvocationCoordinator.ForwardSucceeded
+                    ? (int)ProcessExitCode.Success
+                    : (int)ProcessExitCode.Failure;
             }
 
             var processor = new SelectionProcessor();
@@ -39,6 +41,9 @@ internal static class Program
                 return (int)ProcessExitCode.Failure;
             }
 
+            // Free the leader slot before any UI so new selections aren't dropped while a dialog is open.
+            ExplorerInvocationCoordinator.ReleaseLeader();
+
             if (result.ExitCode == ProcessExitCode.Success)
             {
                 ShowSuccessNotification(result.Included.Count);
@@ -49,6 +54,11 @@ internal static class Program
             }
 
             return (int)result.ExitCode;
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Unexpected error: {ex.Message}");
+            return (int)ProcessExitCode.Failure;
         }
         finally
         {

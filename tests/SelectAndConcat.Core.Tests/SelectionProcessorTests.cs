@@ -189,6 +189,70 @@ public sealed class SelectionProcessorTests : IDisposable
         Assert.Contains(file, result.ClipboardPayload);
     }
 
+    [Fact]
+    public void TruncationNotice_ReportsConfiguredLimit()
+    {
+        var file = CreateFile("big2.txt", new string('a', 8192));
+
+        var result = new SelectionProcessor().Process(
+            new[] { file },
+            new ProcessingOptions { MaxBytesPerFile = 4096 });
+
+        Assert.Contains("4 KiB limit", result.Included[0].Content);
+    }
+
+    [Fact]
+    public void Bom_IsNotPartOfContent()
+    {
+        var file = CreateFile("bom.txt", "hello");
+
+        var result = new SelectionProcessor().Process(new[] { file });
+
+        Assert.Equal("hello", result.Included[0].Content);
+    }
+
+    [Theory]
+    [InlineData(".npmrc")]
+    [InlineData("credentials")]
+    [InlineData("deploy.ppk")]
+    [InlineData("prod.tfvars")]
+    public void Excludes_AdditionalSecretFiles(string name)
+    {
+        var file = CreateFile(name, "secret");
+
+        var result = new SelectionProcessor().Process(new[] { file });
+
+        Assert.Empty(result.Included);
+        Assert.Contains(result.Skipped, x => x.Reason.Contains("sensitive", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void DirectoryExpansion_StopsScanningAtFileLimit()
+    {
+        for (var i = 0; i < 20; i++)
+        {
+            CreateFile($"many\\f{i:D2}.txt", "x");
+        }
+
+        var result = new SelectionProcessor().Process(
+            new[] { Path.Combine(_tempRoot, "many") },
+            new ProcessingOptions { MaxFiles = 3 });
+
+        Assert.Equal(3, result.Included.Count);
+        Assert.Single(result.Skipped);
+    }
+
+    [Fact]
+    public void IgnoredDirectoriesAlone_DoNotCauseWarningExitCode()
+    {
+        CreateFile("proj/a.cs", "class A {}");
+        CreateFile("proj/bin/x.txt", "x");
+
+        var result = new SelectionProcessor().Process(new[] { Path.Combine(_tempRoot, "proj") });
+
+        Assert.Equal(ProcessExitCode.Success, result.ExitCode);
+    }
+
     private string CreateFile(string name, string content)
     {
         var path = Path.Combine(_tempRoot, name);

@@ -38,7 +38,7 @@ internal static class TextDecoding
                     continue;
                 }
 
-                text = candidate;
+                text = StripBom(candidate);
                 return true;
             }
             catch (DecoderFallbackException)
@@ -54,7 +54,7 @@ internal static class TextDecoding
                             continue;
                         }
 
-                        text = candidate;
+                        text = StripBom(candidate);
                         return true;
                     }
                     catch (DecoderFallbackException)
@@ -69,6 +69,8 @@ internal static class TextDecoding
 
         return false;
     }
+
+    private static string StripBom(string text) => text.Length > 0 && text[0] == '﻿' ? text[1..] : text;
 
     private static byte[] TrimIncompleteTrailingBytes(byte[] bytes, Encoding encoding)
     {

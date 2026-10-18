@@ -2,11 +2,11 @@ namespace SelectAndConcat.Core;
 
 public sealed class ProcessingOptions
 {
-    public int MaxFiles { get; init; } = 50;
+    public int MaxFiles { get; init; } = 200;
 
-    public int MaxBytesPerFile { get; init; } = 512 * 1024;
+    public int MaxBytesPerFile { get; init; } = 10 * 512 * 1024;
 
-    public int MaxPayloadBytes { get; init; } = 2 * 1024 * 1024;
+    public int MaxPayloadBytes { get; init; } = 10 * 2 * 1024 * 1024;
 }
 
 public enum ProcessExitCode

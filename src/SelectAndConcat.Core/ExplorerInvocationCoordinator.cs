@@ -7,7 +7,8 @@ namespace SelectAndConcat.Core;
 public static class ExplorerInvocationCoordinator
 {
     private const string MutexName = @"Local\SelectAndConcat.ExplorerInvoke";
-    private const string PipeName = "SelectAndConcat.ExplorerPipe";
+    // Per-session, matching the session-scoped Local\ mutex.
+    private static readonly string PipeName = $"SelectAndConcat.ExplorerPipe.{System.Diagnostics.Process.GetCurrentProcess().SessionId}";
     private static readonly TimeSpan FollowerConnectTimeout = TimeSpan.FromMilliseconds(2000);
     private static readonly TimeSpan LeaderIdleWindow = TimeSpan.FromMilliseconds(350);
     private static readonly TimeSpan LeaderMaxCollectionWindow = TimeSpan.FromMilliseconds(2500);
@@ -16,13 +17,16 @@ public static class ExplorerInvocationCoordinator
     private static Mutex? s_leaderMutex;
     private static long s_leaderStartedTicks;
 
+    /// <summary>False when the last follower could not hand its paths to a leader.</summary>
+    public static bool ForwardSucceeded { get; private set; } = true;
+
     public static IReadOnlyList<string>? CollectOrForward(IReadOnlyList<string> initialPaths)
     {
         var mutex = new Mutex(initiallyOwned: true, MutexName, out var isLeader);
         if (!isLeader)
         {
             mutex.Dispose();
-            ForwardToLeader(initialPaths);
+            ForwardSucceeded = ForwardToLeader(initialPaths);
             return null;
         }
 
@@ -57,7 +61,7 @@ public static class ExplorerInvocationCoordinator
 
     private static IReadOnlyList<string> CollectAsLeader(IReadOnlyList<string> initialPaths)
     {
-        var collected = new ConcurrentBag<string>(initialPaths);
+        var collected = new ConcurrentQueue<string>(initialPaths);
         using var cts = new CancellationTokenSource();
         var lastReceivedTicks = Environment.TickCount64;
 
@@ -67,14 +71,24 @@ public static class ExplorerInvocationCoordinator
             {
                 try
                 {
-                    var server = new NamedPipeServerStream(
+                    NamedPipeServerStream? server = null;
+                    server = new NamedPipeServerStream(
                         PipeName,
                         PipeDirection.In,
                         NamedPipeServerStream.MaxAllowedServerInstances,
                         PipeTransmissionMode.Byte,
                         PipeOptions.Asynchronous);
 
-                    await server.WaitForConnectionAsync(cts.Token);
+                    try
+                    {
+                        await server.WaitForConnectionAsync(cts.Token);
+                    }
+                    catch
+                    {
+                        server.Dispose();
+                        throw;
+                    }
+
                     Interlocked.Exchange(ref lastReceivedTicks, Environment.TickCount64);
 
                     _ = Task.Run(async () =>
@@ -89,7 +103,7 @@ public static class ExplorerInvocationCoordinator
                                 {
                                     if (!string.IsNullOrWhiteSpace(line))
                                     {
-                                        collected.Add(line);
+                                        collected.Enqueue(line);
                                         Interlocked.Exchange(ref lastReceivedTicks, Environment.TickCount64);
                                     }
                                 }
@@ -127,7 +141,7 @@ public static class ExplorerInvocationCoordinator
         return collected.ToList();
     }
 
-    private static void ForwardToLeader(IReadOnlyList<string> paths)
+    private static bool ForwardToLeader(IReadOnlyList<string> paths)
     {
         var deadline = DateTime.UtcNow + FollowerConnectTimeout;
 
@@ -148,7 +162,7 @@ public static class ExplorerInvocationCoordinator
                     writer.WriteLine(path);
                 }
 
-                return;
+                return true;
             }
             catch (TimeoutException)
             {
@@ -159,5 +173,7 @@ public static class ExplorerInvocationCoordinator
 
             Thread.Sleep(25);
         }
+
+        return false;
     }
 }

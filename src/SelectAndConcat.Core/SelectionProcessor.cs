@@ -4,7 +4,7 @@ namespace SelectAndConcat.Core;
 
 public sealed class SelectionProcessor
 {
-    private const string TruncatedSuffix = "\n\n[TRUNCATED: content shortened at 512 KiB limit.]";
+    private const string IgnoredDirectoryReason = "Ignored build/dependency directory.";
 
     private static readonly HashSet<string> IgnoredDirectoryNames = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -35,7 +35,9 @@ public sealed class SelectionProcessor
         var skipped = new List<SkippedFile>();
         var normalized = NormalizeAndExpandPaths(rawPaths, skipped, options.MaxFiles);
 
-        var candidates = new List<IncludedFile>();
+        // Budget is applied while loading so rejected files are not kept in memory.
+        var included = new List<IncludedFile>();
+        var usedBytes = 0;
         foreach (var path in normalized)
         {
             var loaded = TryLoadTextFile(path, options, out var includedFile, out var reason);
@@ -45,10 +47,19 @@ public sealed class SelectionProcessor
                 continue;
             }
 
-            candidates.Add(includedFile);
+            var blockBytes = CalculateFileBlockByteCount(includedFile);
+            // Every remaining path could still be skipped, so use that as the header's skipped-count bound.
+            var headerBytes = CalculateHeaderByteCount(included.Count + 1, skipped.Count + normalized.Count);
+            if (headerBytes + usedBytes + blockBytes > options.MaxPayloadBytes)
+            {
+                skipped.Add(new SkippedFile(path, "Skipped because adding this file would exceed the total payload limit."));
+                continue;
+            }
+
+            included.Add(includedFile);
+            usedBytes += blockBytes;
         }
 
-        var included = ApplyTotalPayloadLimit(candidates, skipped, options);
         var payload = BuildPayload(included, skipped);
 
         while (included.Count > 0 && Encoding.UTF8.GetByteCount(payload) > options.MaxPayloadBytes)
@@ -59,9 +70,10 @@ public sealed class SelectionProcessor
             payload = BuildPayload(included, skipped);
         }
 
+        // Ignored build/dependency folders are expected, so they don't downgrade the result to a warning.
         var exitCode = included.Count == 0
             ? ProcessExitCode.Failure
-            : skipped.Count > 0
+            : skipped.Any(x => x.Reason != IgnoredDirectoryReason)
                 ? ProcessExitCode.PartialSuccess
                 : ProcessExitCode.Success;
 
@@ -144,6 +156,12 @@ public sealed class SelectionProcessor
         foreach (var filePath in EnumerateDirectoryFiles(directoryPath, skipped, depth: 1))
         {
             foundAny = true;
+            if (accepted.Count >= maxFiles)
+            {
+                skipped.Add(new SkippedFile(directoryPath, $"Selection limit reached ({maxFiles} files); remaining files were not scanned."));
+                break;
+            }
+
             AcceptFile(filePath, accepted, seenFiles, seenFileIds, skipped, maxFiles);
         }
 
@@ -200,7 +218,7 @@ public sealed class SelectionProcessor
             var dirName = Path.GetFileName(directory);
             if (IgnoredDirectoryNames.Contains(dirName))
             {
-                skipped.Add(new SkippedFile(directory, "Ignored build/dependency directory."));
+                skipped.Add(new SkippedFile(directory, IgnoredDirectoryReason));
                 continue;
             }
 
@@ -363,7 +381,7 @@ public sealed class SelectionProcessor
 
             if (truncated)
             {
-                decoded += TruncatedSuffix;
+                decoded += $"\n\n[TRUNCATED: content shortened at {options.MaxBytesPerFile / 1024} KiB limit.]";
             }
 
             includedFile = new IncludedFile(
@@ -415,8 +433,9 @@ public sealed class SelectionProcessor
     {
         var fence = GetSafeFence(file.Content);
         var lang = FenceLanguageMap.FromExtension(file.Extension);
-        var header = $"=== FILE: {file.FullPath} ===\n{fence}{lang}\n";
-        var footer = $"\n{fence}\n\n";
+        var nl = Environment.NewLine;
+        var header = $"=== FILE: {file.FullPath} ==={nl}{fence}{lang}{nl}";
+        var footer = $"{nl}{fence}{nl}{nl}";
 
         return Encoding.UTF8.GetByteCount(header) +
                Encoding.UTF8.GetByteCount(file.Content) +
@@ -425,37 +444,9 @@ public sealed class SelectionProcessor
 
     private static int CalculateHeaderByteCount(int includedCount, int skippedCount)
     {
-        var header = $"Selected files for LLM context.\nIncluded: {includedCount} files\nSkipped: {skippedCount} files\nPaths are absolute Windows paths.\n\n";
+        var nl = Environment.NewLine;
+        var header = $"Selected files for LLM context.{nl}Included: {includedCount} files{nl}Skipped: {skippedCount} files{nl}Paths are absolute Windows paths.{nl}{nl}";
         return Encoding.UTF8.GetByteCount(header);
-    }
-
-    private static List<IncludedFile> ApplyTotalPayloadLimit(
-        IReadOnlyList<IncludedFile> candidates,
-        ICollection<SkippedFile> skipped,
-        ProcessingOptions options)
-    {
-        var accepted = new List<IncludedFile>();
-        var totalSkippedCount = skipped.Count;
-        var currentFileBlocksByteCount = 0;
-
-        foreach (var candidate in candidates)
-        {
-            var blockBytes = CalculateFileBlockByteCount(candidate);
-            var testHeaderBytes = CalculateHeaderByteCount(accepted.Count + 1, totalSkippedCount);
-
-            if (testHeaderBytes + currentFileBlocksByteCount + blockBytes <= options.MaxPayloadBytes)
-            {
-                accepted.Add(candidate);
-                currentFileBlocksByteCount += blockBytes;
-            }
-            else
-            {
-                totalSkippedCount++;
-                skipped.Add(new SkippedFile(candidate.FullPath, "Skipped because adding this file would exceed the total payload limit."));
-            }
-        }
-
-        return accepted;
     }
 
     private static string BuildPayload(IReadOnlyList<IncludedFile> included, ICollection<SkippedFile> skipped)

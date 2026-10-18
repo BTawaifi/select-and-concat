@@ -24,13 +24,14 @@ internal static class FileClassification
 
     private static readonly HashSet<string> SensitiveExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".pem", ".key", ".pfx", ".p12", ".asc", ".kdbx", ".pkcs12"
+        ".pem", ".key", ".pfx", ".p12", ".asc", ".kdbx", ".pkcs12", ".ppk", ".p8", ".jks", ".keystore", ".tfvars", ".tfstate"
     };
 
     private static readonly HashSet<string> SensitiveFilenames = new(StringComparer.OrdinalIgnoreCase)
     {
         "id_rsa", "id_dsa", "id_ecdsa", "id_ed25519",
-        "credentials.json", "service-account.json", "client_secret.json"
+        "credentials.json", "service-account.json", "client_secret.json",
+        "credentials", ".npmrc", ".netrc", ".pgpass", ".htpasswd", "secrets.json"
     };
 
     public static bool IsObviousBinaryExtension(string extension) => KnownBinaryExtensions.Contains(extension);
